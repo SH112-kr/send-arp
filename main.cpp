@@ -172,14 +172,14 @@ int main(int argc, char* argv[]) {
 
 
     char errbuf[PCAP_ERRBUF_SIZE];
-    pcap_t* handle = pcap_open_live(dev, 0, 0, 0, errbuf);//pcap send handle
+    pcap_t* handle = pcap_open_live(dev, 0, 0, 1000, errbuf);//pcap send handle
     if (handle == nullptr)
     {
         fprintf(stderr, "couldn't open device %s(%s)\n", dev, errbuf);
         return -1;
     }
 
-    pcap_t* reply_handle = pcap_open_live(dev, BUFSIZ, 1, 1000, errbuf);//pcap reply handle
+    pcap_t* reply_handle = pcap_open_live(dev, BUFSIZ, 1, 1000, errbuf);//pcap reply handle promisc packet
     if (reply_handle == nullptr)
     {
         fprintf(stderr, "couldn't open device %s(%s)\n", dev, errbuf);
