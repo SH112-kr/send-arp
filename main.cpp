@@ -153,8 +153,8 @@ int main(int argc, char* argv[]) {
     char* victim_ip = argv[2]; // victim ip
     char* target_ip = argv[3]; //gateway ip
 
-    char my_mac[6]; //mac size 6
-    char my_ip[6];
+    char my_mac[20]; //mac size 6
+    char my_ip[20];
 
 
 
