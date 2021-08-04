@@ -40,7 +40,7 @@ struct libnet_ethernet_hdr
     u_int16_t ether_type;
 };
 
-int Get_My_Ip_Addr(char *ip_buffer)
+int Get_My_Ip_Addr(char *ip_addr)
 {
     int fd;
     struct ifreq ifr;
@@ -53,7 +53,7 @@ int Get_My_Ip_Addr(char *ip_buffer)
     ioctl(fd, SIOCGIFADDR, &ifr);
     close(fd);
 
-    sprintf(ip_buffer, "%s", inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
+    sprintf(ip_addr, "%s", inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
 
     return 0;
 }
