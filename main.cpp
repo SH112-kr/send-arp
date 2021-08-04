@@ -40,7 +40,7 @@ struct libnet_ethernet_hdr
     u_int16_t ether_type;
 };
 
-int Get_My_Ip_Addr(char *ip_addr)
+int Get_My_Ip_Addr(const char *ifname,char *ip_addr)
 {
     int fd;
     struct ifreq ifr;
@@ -48,7 +48,7 @@ int Get_My_Ip_Addr(char *ip_addr)
     fd = socket(AF_INET, SOCK_DGRAM, 0);
 
     ifr.ifr_addr.sa_family = AF_INET;
-    strncpy(ifr.ifr_name, "eth0", IFNAMSIZ -1);
+    strncpy(ifr.ifr_name, ifname, IFNAMSIZ -1);
 
     ioctl(fd, SIOCGIFADDR, &ifr);
     close(fd);
@@ -161,7 +161,7 @@ int main(int argc, char* argv[]) {
     My_MacAddress(dev, my_mac); // mac_addr
     sprintf(my_mac,MAC_FMT, MAC_ARGS(my_mac)); //my mac save
     printf("My_MacAddress OK\n");
-    Get_My_Ip_Addr(my_ip); // ip_addr
+    Get_My_Ip_Addr(dev,my_ip); // ip_addr
     printf("My_IPAddress OK\n");
 
 
