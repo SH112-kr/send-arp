@@ -40,7 +40,7 @@ struct libnet_ethernet_hdr
     u_int16_t ether_type;
 };
 
-int Get_My_Ip_Addr(const char *ifname,char *ip_addr)
+int Get_My_Ip_Addr(const char *ifname /*Input*/,char *ip_addr /*Output*/)
 {
     int fd;
     struct ifreq ifr;
@@ -59,7 +59,7 @@ int Get_My_Ip_Addr(const char *ifname,char *ip_addr)
 }
 
 
-int My_MacAddress(const char *ifname, char *mac_addr)
+int My_MacAddress(const char *ifname/*Input*/ , char *mac_addr /*Output*/)
 {
     struct ifreq ifr;
     int sockfd, ret;
